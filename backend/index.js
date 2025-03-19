@@ -11,6 +11,11 @@ app.use(cors());
 
 const RECAPTCHA_SECRET_KEY = process.env.RECAPTCHA_SECRET_KEY; // Clé secrète Google reCAPTCHA
 
+if (!RECAPTCHA_SECRET_KEY) {
+  console.error("RECAPTCHA_SECRET_KEY is not defined in the environment variables");
+  process.exit(1);
+}
+
 // Route d'authentification avec validation du CAPTCHA
 app.post("/api/login", async (req, res) => {
   const { email, password, captchaToken } = req.body;
@@ -48,11 +53,20 @@ app.post("/api/login", async (req, res) => {
       return res.status(401).json({ error: "Email ou mot de passe incorrect" });
     }
   } catch (error) {
-    console.error(error);
+    console.error("Error during CAPTCHA verification:", error);
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
 
 // Démarrage du serveur
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Serveur sur http://localhost:${PORT}`));
+const server = app.listen(PORT, () => console.log(`Serveur sur http://localhost:${PORT}`));
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use`);
+    process.exit(1);
+  } else {
+    throw err;
+  }
+});
